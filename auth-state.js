@@ -2,12 +2,16 @@ import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// Pages that don't require login
+const PUBLIC_PAGES = ["index.html", "login.html"];
+
 onAuthStateChanged(auth, async (user) => {
   const path = window.location.pathname;
+  const isPublic = PUBLIC_PAGES.some(p => path.includes(p)) || path === "/" || path.endsWith("/");
 
   if (!user) {
-    // Only redirect AFTER Firebase confirms no user
-    if (!path.includes("login.html")) {
+    // If not logged in and on a protected page, send to login
+    if (!isPublic) {
       window.location.href = "login.html";
     }
     return;
@@ -23,18 +27,13 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    const role = userDoc.data().role.toLowerCase();
+    const role = userDoc.data().role.toLowerCase().replace(/^["']|["']$/g, "");
 
-    console.log("RAW ROLE:", userDoc.data().role);
-    console.log("LOWER:", role);
+    console.log("CLEANED ROLE:", role);
 
-    // Redirect away from login page based on role
+    // If logged in and on login page, redirect to their dashboard
     if (path.includes("login.html")) {
-      if (role === "teacher") {
-        window.location.href = "teacher.html";
-      } else {
-        window.location.href = "index.html";
-      }
+      window.location.href = role === "teacher" ? "teacher.html" : "student.html";
       return;
     }
 
